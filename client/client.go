@@ -19,15 +19,30 @@ import (
 	"time"
 )
 
-func NewHttpClient() (*http.Client, *http.Transport) {
+func NewHttpClient(url url.URL, ip string) (*http.Client, *http.Transport) {
 	// set to use default Http Transport
 	tr := http.Transport{
 		Proxy: http.ProxyFromEnvironment,
+		/*
 		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 			DualStack: true,
 		}).DialContext,
+		*/
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if ip != "" {
+				url2, _ := url.Parse("tcp://" + addr)
+				if url.Hostname() == url2.Hostname() {
+					addr = ip + ":" + url2.Port()
+				}
+			}
+			return (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext(ctx, network, ip+":80")
+		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       90 * time.Second,
@@ -46,6 +61,7 @@ type Options struct {
 	HttpEnabled     bool        // enable http and https proxy
 	LocalHttpAddr   string      // listen address of http and https(if it is enabled)
 	RemoteUrl       *url.URL    // url of server
+	RemoteIp        string      // ip address of server
 	RemoteHeaders   http.Header // parsed websocket headers (not presented in flag).
 	ConnectionKey   string      // connection key for authentication
 	SkipTLSVerify   bool        // skip TSL verify
@@ -95,7 +111,7 @@ func (hdl *Handles) CreateServerConn(c *Options, ctx context.Context) (*wss.WebS
 		c.RemoteHeaders.Set("Key", c.ConnectionKey)
 	}
 
-	httpClient, transport := NewHttpClient()
+	httpClient, transport := NewHttpClient(*c.RemoteUrl, c.RemoteIp)
 
 	if c.RemoteUrl.Scheme == "wss" && c.SkipTLSVerify {
 		// ignore insecure verify

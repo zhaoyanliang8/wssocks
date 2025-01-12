@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -45,6 +46,7 @@ func init() {
 	clientCommand.FlagSet.BoolVar(&client.http, "http", false, `enable http and https proxy.`)
 	clientCommand.FlagSet.StringVar(&client.httpAddr, "http-addr", ":1086", `listen address of http proxy (if enabled).`)
 	clientCommand.FlagSet.StringVar(&client.remote, "remote", "", `server address and port(e.g: ws://example.com:1088).`)
+	clientCommand.FlagSet.StringVar(&client.remoteIp, "remote-ip", "", `server ip address (e.g: 1.1.1.1).`)
 	clientCommand.FlagSet.StringVar(&client.key, "key", "", `connection key.`)
 	clientCommand.FlagSet.Var(&client.headers, "ws-header", `list of user defined http headers in websocket request. 
 (e.g: --ws-header "X-Custom-Header=some-value" --ws-header "X-Second-Header=another-value")`)
@@ -61,6 +63,7 @@ type client struct {
 	http          bool        // enable http and https proxy
 	httpAddr      string      // listen address of http and https(if it is enabled)
 	remote        string      // string usr of server
+	remoteIp      string      // ip address of server
 	remoteUrl     *url.URL    // url of server
 	headers       listFlags   // websocket headers passed from user.
 	remoteHeaders http.Header // parsed websocket headers (not presented in flag).
@@ -77,6 +80,9 @@ func (c *client) PreRun() error {
 		return err
 	} else {
 		c.remoteUrl = u
+	}
+	if c.remoteIp != "" && net.ParseIP(c.remoteIp) == nil {
+		return errors.New("invalid remote ip address")
 	}
 
 	if c.http {
@@ -110,6 +116,7 @@ func (c *client) Run() error {
 		HttpEnabled:     c.http,
 		LocalHttpAddr:   c.httpAddr,
 		RemoteUrl:       c.remoteUrl,
+		RemoteIp:        c.remoteIp,
 		RemoteHeaders:   c.remoteHeaders,
 		ConnectionKey:   c.key,
 		SkipTLSVerify:   c.skipTLSVerify,
