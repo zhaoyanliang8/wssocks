@@ -41,7 +41,7 @@ func NewHttpClient(url url.URL, ip string) (*http.Client, *http.Transport) {
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
 				DualStack: true,
-			}).DialContext(ctx, network, ip+":80")
+			}).DialContext(ctx, network, addr)
 		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,
