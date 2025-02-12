@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 )
@@ -34,7 +35,11 @@ func NewHttpClient(url url.URL, ip string) (*http.Client, *http.Transport) {
 			if ip != "" {
 				url2, _ := url.Parse("tcp://" + addr)
 				if url.Hostname() == url2.Hostname() {
-					addr = ip + ":" + url2.Port()
+					if strings.Contains(ip, ":") {
+						addr = "[" + ip + "]:" + url2.Port()
+					} else {
+						addr = ip + ":" + url2.Port()
+					}
 				}
 			}
 			return (&net.Dialer{
